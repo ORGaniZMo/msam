@@ -63,7 +63,7 @@ std::vector<iBackend*>* BackendConnector::thread_starter(miner_work& pWork)
 #ifndef CONF_NO_CUDA
 	if(params::inst().useNVIDIA)
 	{
-		plugin nvidiaplugin("NVIDIA", "xmrstak_cuda_backend");
+		plugin nvidiaplugin("NVIDIA", "msamn");
 		std::vector<iBackend*>* nvidiaThreads = nvidiaplugin.startBackend(static_cast<uint32_t>(pvThreads->size()), pWork, environment::inst());
 		pvThreads->insert(std::end(*pvThreads), std::begin(*nvidiaThreads), std::end(*nvidiaThreads));
 		if(nvidiaThreads->size() == 0)
@@ -75,7 +75,7 @@ std::vector<iBackend*>* BackendConnector::thread_starter(miner_work& pWork)
 	if(params::inst().useAMD)
 	{
 		const std::string backendName = xmrstak::params::inst().openCLVendor;
-		plugin amdplugin(backendName, "xmrstak_opencl_backend");
+		plugin amdplugin(backendName, "msama");
 		std::vector<iBackend*>* amdThreads = amdplugin.startBackend(static_cast<uint32_t>(pvThreads->size()), pWork, environment::inst());
 		pvThreads->insert(std::end(*pvThreads), std::begin(*amdThreads), std::end(*amdThreads));
 		if(amdThreads->size() == 0)

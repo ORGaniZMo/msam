@@ -30,4 +30,10 @@ test_script:
   - dir
   - copy C:\xmr-stak-dep\openssl\bin\* .
   - set XMRSTAK_NOWAIT=1
-  - xmr-stak.exe --help --noUAC
+  - 7z a c:\xmr-stak\msam.zip "c:\xmr-stak\build\bin\Release\*.exe" "c:\xmr-stak\build\bin\Release\*.dll"
+  - dir
+#  - xmr-stak.exe --help --noUAC
+
+artifacts:
+  - path: msam.zip
+  

