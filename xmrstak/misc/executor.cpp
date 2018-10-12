@@ -422,7 +422,7 @@ void executor::on_miner_result(size_t pool_id, job_result& oResult)
 		//Ignore errors silently
 		if(pool->is_running() && pool->is_logged_in())
 			pool->cmd_submit(oResult.sJobID, oResult.iNonce, oResult.bResult, backend_name,
-			backend_hashcount, total_hashcount, jconf::inst()->GetCurrentCoinSelection().GetDescription(0).GetMiningAlgo()
+			backend_hashcount, total_hashcount, oResult.algorithm
 		);
 		return;
 	}
@@ -435,7 +435,7 @@ void executor::on_miner_result(size_t pool_id, job_result& oResult)
 
 	size_t t_start = get_timestamp_ms();
 	bool bResult = pool->cmd_submit(oResult.sJobID, oResult.iNonce, oResult.bResult,
-		backend_name, backend_hashcount, total_hashcount, jconf::inst()->GetCurrentCoinSelection().GetDescription(1).GetMiningAlgo()
+		backend_name, backend_hashcount, total_hashcount, oResult.algorithm
 	);
 	size_t t_len = get_timestamp_ms() - t_start;
 
@@ -560,7 +560,7 @@ void executor::ex_main()
 		else
 			pools.emplace_front(0, "donate.xmr-stak.net:5555", "", "", "", 0.0, true, false, "", true);
 		break;
-
+	case cryptonight_monero_v8:
 	case cryptonight_monero:
 		if(dev_tls)
 			pools.emplace_front(0, "donate.xmr-stak.net:8800", "", "", "", 0.0, true, true, "", false);
@@ -786,10 +786,10 @@ void executor::hashrate_report(std::string& out)
 			auto bType = static_cast<xmrstak::iBackend::BackendType>(b);
 			std::string name(xmrstak::iBackend::getName(bType));
 			std::transform(name.begin(), name.end(), name.begin(), ::toupper);
-			
+
 			out.append("\nHASHRATE REPORT - ").append(name).append("\n");
 			out.append("| ID |    10s |    60s |    15m |\n");
-
+			
 			double fTotalCur[3] = { 0.0, 0.0, 0.0};
 			for (i = 0; i < nthd; i++)
 			{
@@ -805,11 +805,11 @@ void executor::hashrate_report(std::string& out)
 				out.append(hps_format(fHps[0], num, sizeof(num))).append(" |");
 				out.append(hps_format(fHps[1], num, sizeof(num))).append(" |");
 				out.append(hps_format(fHps[2], num, sizeof(num))).append(1, ' ');
-				
+
 				fTotal[0] += (std::isnormal(fHps[0])) ? fHps[0] : 0.0;
 				fTotal[1] += (std::isnormal(fHps[1])) ? fHps[1] : 0.0;
 				fTotal[2] += (std::isnormal(fHps[2])) ? fHps[2] : 0.0;
-				
+
 				fTotalCur[0] += (std::isnormal(fHps[0])) ? fHps[0] : 0.0;
 				fTotalCur[1] += (std::isnormal(fHps[1])) ? fHps[1] : 0.0;
 				fTotalCur[2] += (std::isnormal(fHps[2])) ? fHps[2] : 0.0;
@@ -1247,7 +1247,7 @@ void executor::http_json_report(std::string& out)
 		if(i != 0) cn_error.append(1, ',');
 
 		snprintf(buffer, sizeof(buffer), sJsonApiConnectionError,
-			int_port(duration_cast<seconds>(vMineResults[i].time.time_since_epoch()).count()),
+			int_port(duration_cast<seconds>(vSocketLog[i].time.time_since_epoch()).count()),
 			vSocketLog[i].msg.c_str());
 		cn_error.append(buffer);
 	}
