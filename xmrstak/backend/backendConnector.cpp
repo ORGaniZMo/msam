@@ -21,31 +21,30 @@
   *
   */
 
-#include "iBackend.hpp"
 #include "backendConnector.hpp"
-#include "miner_work.hpp"
 #include "globalStates.hpp"
+#include "iBackend.hpp"
+#include "miner_work.hpp"
 #include "plugin.hpp"
-#include "xmrstak/misc/environment.hpp"
 #include "xmrstak/misc/console.hpp"
+#include "xmrstak/misc/environment.hpp"
 #include "xmrstak/params.hpp"
 
 #include "cpu/minethd.hpp"
 #ifndef CONF_NO_CUDA
-#	include "nvidia/minethd.hpp"
+#include "nvidia/minethd.hpp"
 #endif
 #ifndef CONF_NO_OPENCL
-#	include "amd/minethd.hpp"
+#include "amd/minethd.hpp"
 #endif
 
-#include <cstdlib>
 #include <assert.h>
-#include <cmath>
+#include <bitset>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <thread>
-#include <bitset>
-
 
 namespace xmrstak
 {
