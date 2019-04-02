@@ -85,7 +85,7 @@ std::vector<iBackend*>* BackendConnector::thread_starter(miner_work& pWork)
 		std::vector<std::string> libNames = {"xmrstak_cuda_backend_cuda10_0", "xmrstak_cuda_backend_cuda9_2", "msamn"};
 		size_t numWorkers = 0u;
 
-		for( const auto & name : libNames)
+		for(const auto& name : libNames)
 		{
 			printer::inst()->print_msg(L0, "NVIDIA: try to load library '%s'", name.c_str());
 			nvidiaplugin.load("NVIDIA", name);
