@@ -35,8 +35,9 @@ Xmr-Stak-RX supports various variants of RandomX algorithm. Use one of the follo
 
 | Coin name | Coin alias in config | POW type |
 | --- | --- |  --- |
-| Monero | `monero` | RandomX |
+| ArQmA | `Arqma` |  RandomARQ |
 | Loki Network | `loki` | RandomXL |
+| Monero | `monero` | RandomX |
 | Wownero (Monero's testnet) | `wownero` | RandomWOW |
 
 
@@ -44,7 +45,7 @@ Xmr-Stak-RX supports various variants of RandomX algorithm. Use one of the follo
 [<img src="/doc/_img/fee.png">](#)
 
 ## Get Miner
-Please note that code is developed on the [dev branch](#), if you want to check out the latest updates, before they are merged on [main branch](#), please refer there. Master branch will always point to a version that we consider stable, so you can download the code by simply typing `git clone https://github.com/fireice-uk/xmr-stak-rx.git`  
+Please note that code is developed on the [dev branch](#), if you want to check out the latest updates, before they are merged on [main branch](#), please refer there. Master branch will always point to a version that we consider stable, so you can download the code by simply typing `git clone https://github.com/fireice-uk/xmr-stak.git -b xmr-stak-rx`  
 
 Also you can find the latest releases, changelog and precompiled binaries on GitHub under [releases](#) section.
 
@@ -76,7 +77,7 @@ Miner has 2 ways of initial configuring: simple and advanced. The simple method 
 
 
 ## Support additional guides and feedback
-[<img src="/doc/_img/YT.png">](#)
+[<img src="/doc/_img/YT.png">](https://www.youtube.com/c/xmrstak)
 To improve our support we created [Xmr-Stak forum](https://www.reddit.com/r/XmrStak) which is also applicable to Xmr-Stak-RX. Check it out if you have a problem, or you are looking for most up to date config for your card and [guides](https://www.reddit.com/r/XmrStak/wiki/index).
 
 <table>

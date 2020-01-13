@@ -37,6 +37,11 @@
 #   include <mach/vm_statistics.h>
 #endif
 
+#if defined(__linux__) && !defined(MAP_HUGE_SHIFT)
+#	include <asm-generic/mman-common.h>
+#endif
+
+#include "xmrstak/misc/console.hpp"
 
 int xmrstak::VirtualMemory::m_globalFlags = 0;
 
@@ -94,15 +99,23 @@ void *xmrstak::VirtualMemory::allocateExecutableMemory(size_t size)
     return mem == MAP_FAILED ? nullptr : mem;
 }
 
-
-void *xmrstak::VirtualMemory::allocateLargePagesMemory(size_t size)
+void *xmrstak::VirtualMemory::allocateLargePagesMemory(size_t size, size_t page_size)
 {
 #   if defined(__APPLE__)
     void *mem = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, VM_FLAGS_SUPERPAGE_SIZE_2MB, 0);
 #   elif defined(__FreeBSD__)
     void *mem = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_ALIGNED_SUPER | MAP_PREFAULT_READ, -1, 0);
 #   else
-    void *mem = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_POPULATE, 0, 0);
+	constexpr int MAP_HUGE_2MB = (21 << MAP_HUGE_SHIFT);
+	constexpr int MAP_HUGE_1GB = (30 << MAP_HUGE_SHIFT);
+
+	int page_size_flags = 0;
+	if(page_size == 2u)
+		page_size_flags |= MAP_HUGE_2MB;
+	else if(page_size == 1024u)
+		page_size_flags |= MAP_HUGE_1GB;
+
+    void *mem = mmap(0, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_POPULATE | page_size_flags, 0, 0);
 #   endif
 
     return mem == MAP_FAILED ? nullptr : mem;
@@ -119,7 +132,16 @@ void xmrstak::VirtualMemory::flushInstructionCache(void *p, size_t size)
 
 void xmrstak::VirtualMemory::freeLargePagesMemory(void *p, size_t size)
 {
-    munmap(p, size);
+    if(munmap(p, size) != 0)
+	{
+		printer::inst()->print_msg(LDEBUG,"munmap failed %llu", (uint64_t)size);
+		size_t page3gib = 3llu*1024*1024*1024;
+		printer::inst()->print_msg(LDEBUG,"try to unmap ", page3gib);
+		if(munmap(p, page3gib) != 0)
+		{
+			printer::inst()->print_msg(LDEBUG,"munmap failed %llu", (uint64_t)page3gib);
+		}
+	}
 }
 
 

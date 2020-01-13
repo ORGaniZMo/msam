@@ -35,7 +35,7 @@
 #include "xmrstak/jconf.hpp"
 #include "xmrstak/misc/executor.hpp"
 
-#include "hwlocMemory.hpp"
+#include "xmrstak/backend/cpu/hwlocHelper.hpp"
 #include "xmrstak/backend/miner_work.hpp"
 
 #ifndef CONF_NO_HWLOC
@@ -147,9 +147,11 @@ minethd::minethd(miner_work& pWork, size_t iNo, int iMultiway, int64_t affinity)
 
 	order_guard.wait();
 
+#if defined(CONF_NO_HWLOC) || defined(_WIN32)
 	if(affinity >= 0) //-1 means no affinity
 		if(!thd_setaffinity(oWorkThd.native_handle(), affinity))
 			printer::inst()->print_msg(L1, "WARNING setting affinity failed.");
+#endif
 }
 
 cryptonight_ctx* minethd::minethd_alloc_ctx()
@@ -260,6 +262,12 @@ bool minethd::self_test()
 	if(res == 0 && fatal)
 		return false;
 
+	if(!params::inst().selfTest)
+	{
+		printer::inst()->print_msg(L0, "skip self test: disabled by the command line option '--noTest')");
+		return true;
+	}
+
 	cryptonight_ctx* ctx[MAX_N] = {0};
 	for(int i = 0; i < MAX_N; i++)
 	{
@@ -270,7 +278,9 @@ bool minethd::self_test()
 				cryptonight_free_ctx(ctx[j]);
 			return false;
 		}
+		ctx[i]->numa = 0;
 	}
+	randomX_global_ctx::inst().init(0);
 
 	bool bResult = true;
 
@@ -317,6 +327,18 @@ bool minethd::self_test()
 			ctx[0]->hash_fn("\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74", 44, out, ctx, algo);
 			bResult = bResult && memcmp(out, "\xc7\x78\x25\x35\xd8\x11\xda\x56\x32\xb0\xa4\xb8\x9d\x9d\x1a\xdf\x7b\x9\x69\xae\x92\x4f\xd4\xd0\x4c\x6b\x55\x5e\x77\xe9\x8f\x38", 32) == 0;
 		}
+		else if(algo == POW(randomX_arqma))
+		{
+			printer::inst()->print_msg(L0, "start self test for 'randomx_arqma' (can be disabled with the command line option '--noTest')");
+			minethd::cn_on_new_job set_job;
+			func_multi_selector<1>(ctx, set_job, ::jconf::inst()->HaveHardwareAes(), algo);
+			miner_work work;
+			work.iBlockHeight = 1806260;
+			work.seed_hash[0] = 1;
+			set_job(work, ctx);
+			ctx[0]->hash_fn("\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74\x20\x54\x68\x69\x73\x20\x69\x73\x20\x61\x20\x74\x65\x73\x74", 44, out, ctx, algo);
+			bResult = bResult && memcmp(out, "\x96\xd5\x33\x16\x7f\x33\xeb\x37\xc7\xc5\x44\xae\xc8\x55\x96\x62\x09\x59\xc1\xfe\xb8\xca\x5c\x40\x37\x06\x07\x64\x60\xab\x86\xec", 32) == 0;
+		}
 		else
 		{
 			printer::inst()->print_msg(L0,
@@ -329,7 +351,10 @@ bool minethd::self_test()
 	}
 
 	for(int i = 0; i < MAX_N; i++)
+	{
 		cryptonight_free_ctx(ctx[i]);
+	}
+	randomX_global_ctx::inst().release(0);
 
 	return bResult;
 }
@@ -440,6 +465,9 @@ void minethd::func_multi_selector(cryptonight_ctx** ctx, minethd::cn_on_new_job&
 	case randomX_wow:
 		algv = 2;
 		break;
+	case randomX_arqma:
+		algv = 3;
+		break;
 	default:
 		algv = 0;
 		break;
@@ -456,7 +484,11 @@ void minethd::func_multi_selector(cryptonight_ctx** ctx, minethd::cn_on_new_job&
 
 		//wow
 		RandomX_hash<N>::template hash<randomX_wow, false>,
-		RandomX_hash<N>::template hash<randomX_wow, true>
+		RandomX_hash<N>::template hash<randomX_wow, true>,
+
+		//arqma
+		RandomX_hash<N>::template hash<randomX_arqma, false>,
+		RandomX_hash<N>::template hash<randomX_arqma, true>
 	};
 
 	std::bitset<1> digit;
@@ -470,7 +502,8 @@ void minethd::func_multi_selector(cryptonight_ctx** ctx, minethd::cn_on_new_job&
 	static const std::unordered_map<uint32_t, minethd::cn_on_new_job> on_new_job_map = {
 		{randomX, RandomX_generator<N>::template cn_on_new_job<randomX>},
 		{randomX_loki, RandomX_generator<N>::template cn_on_new_job<randomX_loki>},
-		{randomX_wow, RandomX_generator<N>::template cn_on_new_job<randomX_wow>}
+		{randomX_wow, RandomX_generator<N>::template cn_on_new_job<randomX_wow>},
+		{randomX_arqma, RandomX_generator<N>::template cn_on_new_job<randomX_arqma>}
 	};
 
 	auto it = on_new_job_map.find(algo.Id());
@@ -519,8 +552,10 @@ void minethd::prep_multiway_work(uint8_t* bWorkBlob, uint32_t** piNonce)
 template <uint32_t N>
 void minethd::multiway_work_main()
 {
+	// keep init phase in some order
+	std::this_thread::sleep_for(std::chrono::milliseconds(2 * affinity));
 	if(affinity >= 0) //-1 means no affinity
-		bindMemoryToNUMANode(affinity);
+		hwlocBind(affinity);
 
 	order_fix.set_value();
 	std::unique_lock<std::mutex> lck(thd_aff_set);
@@ -547,9 +582,12 @@ void minethd::multiway_work_main()
 				cryptonight_free_ctx(ctx[j]);
 			win_exit(1);
 		}
+		ctx[i]->numa = affinity < 0 ? 0 : numdaId(affinity);
 		piHashVal[i] = (uint64_t*)(bHashOut + 32 * i + 24);
 		piNonce[i] = (i == 0) ? (uint32_t*)(bWorkBlob + 39) : nullptr;
 	}
+
+	randomX_global_ctx::inst().init(ctx[0]->numa);
 
 	if(!oWork.bStall)
 		prep_multiway_work<N>(bWorkBlob, piNonce);
@@ -579,9 +617,6 @@ void minethd::multiway_work_main()
 			continue;
 		}
 
-		constexpr uint32_t nonce_chunk = 4096;
-		int64_t nonce_ctr = 0;
-
 		assert(sizeof(job_result::sJobID) == sizeof(pool_job::sJobID));
 
 		if(oWork.bNiceHash)
@@ -608,6 +643,13 @@ void minethd::multiway_work_main()
 		if(on_new_job != nullptr)
 			on_new_job(oWork, ctx);
 
+		uint64_t tempHash[N][8];
+		uint32_t current_nonces[N];
+		// always use a multiple of N
+		constexpr uint32_t nonce_chunk = 4096 * N;
+		int64_t nonce_ctr = 0;
+		bool first = true;
+
 		constexpr uint64_t update_stat_each = 128;
 		// only check each 128 hash if the job has changed
 		while((iCount % update_stat_each) != 0 || globalStates::inst().iGlobalJobNo.load(std::memory_order_relaxed) == iJobNo)
@@ -622,20 +664,41 @@ void minethd::multiway_work_main()
 					break;
 			}
 
-			for(size_t i = 0; i < N; i++)
-				*piNonce[i] = iNonce++;
+			if(first)
+			{
+				first = false;
+				for(size_t i = 0u; i < N; ++i)
+				{
+					*piNonce[i] = iNonce;
+					current_nonces[i] = iNonce;
+					++iNonce;
+					randomx_calculate_hash_first(ctx[i]->m_rx_vm, tempHash[i], bWorkBlob + oWork.iWorkSize * i, oWork.iWorkSize);
+				}
+			};
 
-			ctx[0]->hash_fn(bWorkBlob, oWork.iWorkSize, bHashOut, ctx, miner_algo);
-
+			// prepare nonce for next round
 			for(size_t i = 0; i < N; i++)
+			{
+				*piNonce[i] = iNonce;
+				++iNonce;
+			}
+
+			for(size_t i = 0u; i < N; ++i)
+				randomx_calculate_hash_next(ctx[i]->m_rx_vm, tempHash[i], bWorkBlob + oWork.iWorkSize * i, oWork.iWorkSize, (char*)bHashOut + 32 * i);
+
+			for(size_t i = 0u; i < N; i++)
 			{
 				if(*piHashVal[i] < oWork.iTarget)
 				{
 					executor::inst()->push_event(
-						ex_event(job_result(oWork.sJobID, iNonce - N + i, bHashOut + 32 * i, iThreadNo, miner_algo),
+						ex_event(job_result(oWork.sJobID, current_nonces[i], bHashOut + 32 * i, iThreadNo, miner_algo),
 							oWork.iPoolId));
 				}
 			}
+
+			for(size_t i = 0; i < N; i++)
+				current_nonces[i] = iNonce - N + i;
+
 			if((iCount++ % update_stat_each) == 0) //Store stats every 8*N hashes
 			{
 				updateStats((iCount - iLastCount) * N, oWork.iPoolId);

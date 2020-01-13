@@ -107,6 +107,12 @@ void help()
 	cout << "  -p, --pass PASSWD          pool password, in the most cases x or empty \"\"" << endl;
 	cout << "  --use-nicehash             the pool should run in nicehash mode" << endl;
 	cout << "  --currency NAME            currency to mine" << endl;
+	cout << "  --noDevSupport             To improve our support the miner is sending information" << endl;
+	cout << "                             to the development server. " << endl;
+	cout << "                             Use this option to disable sending system information." << endl;
+	cout << "                             data send:" << endl;
+	cout << "                                 miner version, used algorithm, system hardware overview" << endl;
+	cout << "                                 and number of used threads." << endl;
 	cout << endl;
 #ifdef _WIN32
 	cout << "Environment variables:\n"
@@ -516,6 +522,10 @@ int main(int argc, char* argv[])
 		{
 			params::inst().selfTest = false;
 		}
+		else if(opName.compare("--noDevSupport") == 0)
+		{
+			params::inst().devSupport = false;
+		}
 		else if (opName.compare("--nvidiaGpus") == 0)
 		{
 			++i;
@@ -838,14 +848,11 @@ int main(int argc, char* argv[])
 	if(strlen(jconf::inst()->GetOutputFile()) != 0)
 		printer::inst()->open_logfile(jconf::inst()->GetOutputFile());
 
-	if(params::inst().selfTest)
+	if(!BackendConnector::self_test())
 	{
-		if(!BackendConnector::self_test())
-		{
-			printer::inst()->print_msg(L0, "Self test not passed!");
-			win_exit();
-			return 1;
-		}
+		printer::inst()->print_msg(L0, "Self test not passed!");
+		win_exit();
+		return 1;
 	}
 
 	if(jconf::inst()->GetHttpdPort() != uint16_t(params::httpd_port_disabled))

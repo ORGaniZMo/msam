@@ -472,11 +472,11 @@ file(GLOB BACKEND_CPP
     "xmrstak/misc/*.cpp"
     "xmrstak/net/*.cpp")
 
-add_library(xmr-stak-backend
+add_library(xmr-stak-rx-backend
     STATIC
     ${BACKEND_CPP}
 )
-target_link_libraries(xmr-stak-backend xmr-stak-randomx ${CMAKE_DL_LIBS} ${RANDOMX_LIBRARIES} ${MHTD} ${LIBS})
+target_link_libraries(xmr-stak-rx-backend xmr-stak-randomx ${CMAKE_DL_LIBS} ${RANDOMX_LIBRARIES} ${MHTD} ${LIBS})
 
 # compile CUDA backend
 if(CUDA_FOUND)
@@ -507,7 +507,7 @@ if(CUDA_FOUND)
     set(CUDA_LIBRARIES ${CUDA_LIBRARIES})
     
     target_link_libraries(msamn ${CUDA_LIBRARIES})
-    target_link_libraries(msamn xmr-stak-backend)
+    target_link_libraries(msamn xmr-stak-rx-backend)
 endif()
 
 # compile AMD backend
@@ -520,7 +520,7 @@ if(OpenCL_FOUND)
         ${OPENCLSRCFILES}
     )
     target_link_libraries(msama ${OpenCL_LIBRARY} )
-    target_link_libraries(msama xmr-stak-backend)
+    target_link_libraries(msama xmr-stak-rx-backend)
 endif()
 
 # compile final binary
@@ -536,16 +536,25 @@ endif()
 set(EXECUTABLE_OUTPUT_PATH "bin" CACHE STRING "Path to place executables relative to ${CMAKE_INSTALL_PREFIX}")
 set(LIBRARY_OUTPUT_PATH "bin" CACHE STRING "Path to place libraries relative to ${CMAKE_INSTALL_PREFIX}")
 
-target_link_libraries(msam ${MHTD} ${LIBS} xmr-stak-backend)
+target_link_libraries(msam ${MHTD} ${LIBS} xmr-stak-rx-backend)
 
 ################################################################################
 # Install
 ################################################################################
 
+# install booster script
+if(NOT WIN32)
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/scripts/" DESTINATION ${CMAKE_INSTALL_PREFIX}/${LIBRARY_OUTPUT_PATH}
+        FILES_MATCHING PATTERN "*.sh"
+        PERMISSIONS OWNER_EXECUTE OWNER_READ OWNER_WRITE GROUP_READ GROUP_EXECUTE
+        PATTERN .git EXCLUDE
+    )
+endif()
+
 # do not install the binary if the project and install are equal
 if( NOT CMAKE_INSTALL_PREFIX STREQUAL PROJECT_BINARY_DIR )
     install(TARGETS msam
-            RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${EXECUTABLE_OUTPUT_PATH}")
+        RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}/${EXECUTABLE_OUTPUT_PATH}")
     if(CUDA_FOUND)
         if(WIN32)
             install(TARGETS msamn

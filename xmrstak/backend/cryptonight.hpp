@@ -13,6 +13,7 @@ enum xmrstak_algo_id
 	randomX = 1,
 	randomX_loki = 2,
 	randomX_wow = 3,
+	randomX_arqma = 4
 
 	//cryptonight_turtle = start_derived_algo_id,
 	// please add the algorithm name to get_algo_name()
@@ -24,12 +25,13 @@ enum xmrstak_algo_id
  */
 inline std::string get_algo_name(xmrstak_algo_id algo_id)
 {
-	static std::array<std::string, 4> base_algo_names =
+	static std::array<std::string, 5> base_algo_names =
 		{{
 			"invalid_algo",
 			"randomx",
 			"randomx_loki",
-			"randomx_wow"
+			"randomx_wow",
+			"randomx_arqma"
 		}};
 
 	static std::array<std::string, 0> derived_algo_names =
@@ -48,30 +50,13 @@ struct xmrstak_algo
 		base_algo(name_id)
 	{
 	}
-	xmrstak_algo(xmrstak_algo_id name_id, xmrstak_algo_id algorithm) :
-		algo_name(name_id),
-		base_algo(algorithm)
-	{
-	}
-	xmrstak_algo(xmrstak_algo_id name_id, xmrstak_algo_id algorithm, uint32_t iteration) :
+
+	xmrstak_algo(xmrstak_algo_id name_id, xmrstak_algo_id algorithm, size_t l3, size_t l2, size_t l1) :
 		algo_name(name_id),
 		base_algo(algorithm),
-		iter(iteration)
-	{
-	}
-	xmrstak_algo(xmrstak_algo_id name_id, xmrstak_algo_id algorithm, uint32_t iteration, size_t memory) :
-		algo_name(name_id),
-		base_algo(algorithm),
-		iter(iteration),
-		mem(memory)
-	{
-	}
-	xmrstak_algo(xmrstak_algo_id name_id, xmrstak_algo_id algorithm, uint32_t iteration, size_t memory, uint32_t mem_mask) :
-		algo_name(name_id),
-		base_algo(algorithm),
-		iter(iteration),
-		mem(memory),
-		mask(mem_mask)
+		m_l3(l3),
+		m_l2(l2),
+		m_l1(l1)
 	{
 	}
 
@@ -81,7 +66,7 @@ struct xmrstak_algo
 	 */
 	bool operator==(const xmrstak_algo& other) const
 	{
-		return other.Id() == Id() && other.Mem() == Mem() && other.Iter() == Iter() && other.Mask() == Mask();
+		return other.Id() == Id() && other.L3() == L3() && other.L2() == L2() && other.L1() == L1();
 	}
 
 	bool operator==(const xmrstak_algo_id& id) const
@@ -104,17 +89,19 @@ struct xmrstak_algo
 		return algo_name;
 	}
 
-	size_t Mem() const
+	size_t L3() const
 	{
-		if(base_algo == invalid_algo)
-			return 0;
-		else
-			return mem;
+		return m_l3;
 	}
 
-	uint32_t Iter() const
+	size_t L2() const
 	{
-		return iter;
+		return m_l2;
+	}
+
+	size_t L1() const
+	{
+		return m_l1;
 	}
 
 	/** Name of the algorithm
@@ -135,46 +122,30 @@ struct xmrstak_algo
 		return get_algo_name(base_algo);
 	}
 
-	uint32_t Mask() const
-	{
-		// default is a 16 byte aligne mask
-		if(mask == 0)
-			return ((mem - 1u) / 16) * 16;
-		else
-			return mask;
-	}
+
 
 	xmrstak_algo_id algo_name = invalid_algo;
 	xmrstak_algo_id base_algo = invalid_algo;
-	uint32_t iter = 0u;
-	size_t mem = 0u;
-	uint32_t mask = 0u;
+	size_t m_l3 = 1u; // avoid diffision by zero
+	size_t m_l2 = 1u;
+	size_t m_l1 = 1u;
 };
 
 // default cryptonight
-constexpr size_t CN_MEMORY = 2 * 1024 * 1024;
-constexpr uint32_t CN_ITER = 0x80000;
-constexpr uint32_t CN_MASK = ((CN_MEMORY - 1) / 16) * 16;
+constexpr size_t _2MiB = 2 * 1024 * 1024;
+constexpr size_t _256KiB = 256 * 1024;
+constexpr size_t _16KiB = 16 * 1024;
 
-// crptonight gpu
-constexpr uint32_t CN_GPU_MASK = 0x1FFFC0;
-constexpr uint32_t CN_GPU_ITER = 0xC000;
-
-// cryptonight turtle (the mask is not using the full 256kib scratchpad)
-constexpr uint32_t CN_TURTLE_MASK = 0x1FFF0;
-
-constexpr uint32_t CN_ZELERIUS_ITER = 0x60000;
-
-constexpr uint32_t CN_WALTZ_ITER = 0x60000;
-
-constexpr uint32_t CN_DOUBLE_ITER = 0x100000;
+constexpr uint32_t RX_ARQMA_ITER = 0x10000;
 
 inline xmrstak_algo POW(xmrstak_algo_id algo_id)
 {
-	static std::array<xmrstak_algo, 4> pow = {{{invalid_algo, invalid_algo},
-		{randomX, randomX, CN_ITER, CN_MEMORY},
-		{randomX_loki, randomX_loki, CN_ITER, CN_MEMORY},
-		{randomX_wow, randomX_wow, CN_ITER, CN_MEMORY/2}
+	static std::array<xmrstak_algo, 5> pow = {{
+		{invalid_algo},
+		{randomX, randomX, _2MiB, _256KiB, _16KiB},
+		{randomX_loki, randomX_loki, _2MiB, _256KiB, _16KiB},
+		{randomX_wow, randomX_wow, _2MiB/2, _256KiB/2, _16KiB},
+		{randomX_arqma, randomX_arqma, _2MiB/8, _256KiB/2, _16KiB}
 	}};
 
 	return pow[algo_id];

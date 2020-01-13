@@ -2,6 +2,8 @@
 
 ## Content Overview
 * [Fast Startup](#fast-startup)
+* [Booster Script](#booster-script)
+* [Huge Page Support](#huge-page-support)
 * [Benchmark](#benchmark)
 * [Windows](#windows)
 * [Managing GPUs](#managing-GPUs)
@@ -22,6 +24,38 @@
 
 ## Fast Startup
 You can disable the miner self test performed on each miner start by adding the command line option `--noTest`
+
+## Booster Script
+
+The linux booster script manipulates the CPU caching behavior and activates huge pages.
+
+Call `sudo ./randomx_booster.sh`. 
+
+The booster script will try to install all dependencies if need. 
+If the script can not install the dependencies (e.g. unknown systems) please install the tools `wrmsr` and `numactl`.
+
+## Huge Page Support
+
+In Linux you can enable 2 MiB huge pages with the following command.
+In linux you can use our [booster script](#booster-script) to active huge pages
+
+```
+sudo sysctl -w vm.nr_hugepages=1300
+```
+
+In linux there is also the possibility to use 1 GiB pages for the dataset, this can be enabled with.
+
+```
+sudo sh -c ' echo 3 >/sys/kernel/mm/hugepages/hugepages-1048576kB/nr_hugepages'
+# check if the pages are enabled
+cat /sys/kernel/mm/hugepages/hugepages-1048576kB/free_hugepages
+```
+
+If the last must return `3` else the OS was not able to allocate 1 GiB pages. 
+Reasons for this can be that the you have to less main memory, you should have at least 8 GiB main memory.
+If the system already runs for a while it could be your memory is already fragmented, a restart could help.
+xmr-stak-rx is always using gigabyte pages when available, if this has a negative effect on your hashrate set the number
+of gigabyte pages back to zero.
 
 ## Benchmark
 You can benchmark the miner in two ways:

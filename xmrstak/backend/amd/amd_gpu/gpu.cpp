@@ -164,7 +164,7 @@ size_t InitOpenCLGpu(cl_context opencl_ctx, GpuContext* ctx, const char* source_
 	size_t scratchPadSize = 0;
 	for(const auto algo : neededAlgorithms)
 	{
-		scratchPadSize = std::max(scratchPadSize, algo.Mem());
+		scratchPadSize = std::max(scratchPadSize, algo.L3());
 	}
 
 	size_t g_thd = ctx->rawIntensity;
@@ -182,7 +182,7 @@ size_t InitOpenCLGpu(cl_context opencl_ctx, GpuContext* ctx, const char* source_
 			ctx->rx_dataset[ctx->deviceIdx] = clCreateBuffer(opencl_ctx, CL_MEM_READ_ONLY, dataset_size, nullptr, &ret);
 		}
 		else {
-			void* dataset = getRandomXDataset();
+			void* dataset = getRandomXDataset(0);
 			ctx->rx_dataset[ctx->deviceIdx] = clCreateBuffer(opencl_ctx, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, dataset_size, dataset, &ret);
 		}
 
@@ -193,7 +193,7 @@ size_t InitOpenCLGpu(cl_context opencl_ctx, GpuContext* ctx, const char* source_
 		}
 	}
 
-	ctx->rx_scratchpads = clCreateBuffer(opencl_ctx, CL_MEM_READ_WRITE, (user_algo.Mem() + 64) * g_thd, nullptr, &ret);
+	ctx->rx_scratchpads = clCreateBuffer(opencl_ctx, CL_MEM_READ_WRITE, (user_algo.L3() + 64) * g_thd, nullptr, &ret);
 	if(ret != CL_SUCCESS)
 	{
 		printer::inst()->print_msg(L1, "Error %s when calling clCreateBuffer to create RandomX scratchpads.", err_to_str(ret));
@@ -294,9 +294,7 @@ size_t InitOpenCLGpu(cl_context opencl_ctx, GpuContext* ctx, const char* source_
 	for(const auto miner_algo : neededAlgorithms)
 	{
 		// scratchpad size for the selected mining algorithm
-		size_t hashMemSize = miner_algo.Mem();
-		int threadMemMask = miner_algo.Mask();
-		int hashIterations = miner_algo.Iter();
+		size_t hashMemSize = miner_algo.L3();
 
 		std::string options;
 		options += " -DALGO=" + std::to_string(miner_algo.Id());
@@ -865,6 +863,8 @@ size_t InitOpenCLGpu(cl_context opencl_ctx, GpuContext* ctx, const char* source_
 				rx_conf = &RandomX_WowneroConfig;
 			else if(miner_algo == randomX)
 				rx_conf = &RandomX_MoneroConfig;
+			else if(miner_algo == randomX_arqma)
+				rx_conf = &RandomX_ArqmaConfig;
 
 			const uint32_t rx_parameters =
 				(PowerOf2(rx_conf->ScratchpadL1_Size) << 0) |
@@ -1189,6 +1189,9 @@ size_t InitOpenCL(GpuContext* ctx, size_t num_gpus, size_t platform_idx)
 	const char* randomx_constants_monero_h =
 		#include "./opencl/RandomX/randomx_constants_monero.h"
 	;
+	const char* randomx_constants_arqma_h =
+		#include "./opencl/RandomX/randomx_constants_arqma.h"
+	;
 	const char* aesCL =
 		#include "./opencl/RandomX/aes.cl"
 	;
@@ -1214,6 +1217,8 @@ size_t InitOpenCL(GpuContext* ctx, size_t num_gpus, size_t platform_idx)
 		source_code.append(randomx_constants_loki_h);
 	else if(user_algo == randomX)
 		source_code.append(randomx_constants_monero_h);
+	else if(user_algo == randomX_arqma)
+		source_code.append(randomx_constants_arqma_h);
 
 	source_code.append(std::regex_replace(aesCL, std::regex("#include \"fillAes1Rx4.cl\""), fillAes1Rx4CL));
 	source_code.append(std::regex_replace(blake2bCL, std::regex("#include \"blake2b_double_block.cl\""), blake2b_double_blockCL));
@@ -1357,7 +1362,7 @@ uint64_t interleaveAdjustDelay(GpuContext* ctx, const bool enableAutoAdjustment)
 size_t RXSetJob(GpuContext *ctx, uint8_t *input, size_t input_len, uint64_t target, const uint8_t* seed_hash, const xmrstak_algo& miner_algo)
 {
 	cl_int ret;
-	void* dataset = getRandomXDataset();
+	void* dataset = getRandomXDataset(0);
 	const size_t dataset_size = getRandomXDatasetSize();
 
 	if((memcmp(ctx->rx_dataset_seedhash, seed_hash, sizeof(ctx->rx_dataset_seedhash)) != 0))
